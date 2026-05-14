@@ -358,7 +358,7 @@ fun ChatInputBar(isLoading: Boolean, onSendMessage: (String) -> Unit) {
                     focusedContainerColor = Color(0xFFF5F5F5),
                     unfocusedContainerColor = Color(0xFFF5F5F5),
                     disabledContainerColor = Color(0xFFF5F5F5),
-                    disabledIndicatorColor = Color.Transparent
+                    disabledBorderColor = Color.Transparent
                 ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(
@@ -401,7 +401,7 @@ fun EmptyChatState(modifier: Modifier = Modifier) {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
-                imageVector = Icons.Default.ChatBubble,
+                imageVector = Icons.Default.Settings,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
                 tint = LoginButton.copy(alpha = 0.5f)
@@ -477,5 +477,30 @@ fun extractDateString(timestamp: String?): String {
         if (dateString == todayString) "Bugün" else dateString
     } catch (e: Exception) {
         "Bilinmeyen Tarih"
+    }
+}
+
+@Composable
+fun ChatBubble(
+    text: String,
+    isUser: Boolean
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart
+    ) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = if (isUser) LoginButton else Color.White,
+            modifier = Modifier.padding(vertical = 4.dp),
+            shadowElevation = 1.dp
+        ) {
+            Text(
+                text = text,
+                modifier = Modifier.padding(12.dp),
+                color = if (isUser) Color.White else Color.Black,
+                fontSize = 15.sp
+            )
+        }
     }
 }
