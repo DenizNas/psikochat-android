@@ -1,5 +1,6 @@
 package com.psikochat.app.ui.auth
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,23 +20,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import com.psikochat.app.ui.theme.*
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.psikochat.app.data.api.RetrofitClient
 import com.psikochat.app.data.local.TokenManager
 import com.psikochat.app.data.model.Resource
 import com.psikochat.app.data.repository.AuthRepository
+import com.psikochat.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManager) {
+fun ResetPasswordScreen(navController: NavController, resetToken: String, tokenManager: TokenManager) {
     val api = RetrofitClient.create(tokenManager)
     val repo = AuthRepository(api)
     val factory = object : ViewModelProvider.Factory {
@@ -45,23 +46,17 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
     }
     val viewModel: AuthViewModel = viewModel(factory = factory)
 
-    var emailOrPhone by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var validationError by remember { mutableStateOf<String?>(null) }
-    val resetRequestState by viewModel.resetRequestState.collectAsState()
+    
+    val completeState by viewModel.resetCompleteState.collectAsState()
 
-    LaunchedEffect(resetRequestState) {
-        when (resetRequestState) {
-            is Resource.Success -> {
-                if (resetRequestState.data == true) {
-                    Log.d("ForgotPasswordScreen", "PASSWORD_RESET_REQUEST_SUCCESS")
-                    val encodedEmail = java.net.URLEncoder.encode(emailOrPhone.trim(), "UTF-8")
-                    navController.navigate("verification_code/$encodedEmail")
-                }
+    LaunchedEffect(completeState) {
+        if (completeState is Resource.Success && (completeState.data == true)) {
+            navController.navigate("login") {
+                popUpTo("auth_graph") { inclusive = true }
             }
-            is Resource.Error -> {
-                Log.e("ForgotPasswordScreen", "PASSWORD_RESET_REQUEST_ERROR")
-            }
-            else -> {}
         }
     }
 
@@ -132,7 +127,7 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Favorite,
+                    imageVector = Icons.Default.Lock,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
                     tint = DarkTealPrimary
@@ -179,7 +174,7 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "Şifremi Unuttum",
+                        text = "Yeni Şifre Belirle",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold
                         ),
@@ -188,7 +183,7 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
                     )
 
                     Text(
-                        text = "Hemen şifrenizi yenilemek için kayıtlı e-posta adresinizi veya telefon numaranızı girin. Size bir doğrulama kodu göndereceğiz.",
+                        text = "Hesabınızı güvende tutmak için en az 8 karakterden oluşan güçlü bir şifre girin.",
                         style = MaterialTheme.typography.bodySmall,
                         color = LoginSecondaryText,
                         modifier = Modifier.align(Alignment.Start)
@@ -197,13 +192,14 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
                     Spacer(modifier = Modifier.height(24.dp))
 
                     OutlinedTextField(
-                        value = emailOrPhone,
-                        onValueChange = { emailOrPhone = it },
-                        placeholder = { Text("E-posta veya Telefon Numarası", color = LoginSecondaryText) },
+                        value = newPassword,
+                        onValueChange = { newPassword = it },
+                        placeholder = { Text("Yeni Şifre", color = LoginSecondaryText) },
                         textStyle = TextStyle(color = LoginTextColor),
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = SecondaryTealText) },
+                        visualTransformation = PasswordVisualTransformation(),
+                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = SecondaryTealText) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = SoftMintLight,
                             unfocusedContainerColor = SoftMintLight,
@@ -216,7 +212,28 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    val displayError = validationError ?: (if (resetRequestState is Resource.Error) (resetRequestState as Resource.Error).message else null)
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        placeholder = { Text("Yeni Şifre Tekrar", color = LoginSecondaryText) },
+                        textStyle = TextStyle(color = LoginTextColor),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        visualTransformation = PasswordVisualTransformation(),
+                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = SecondaryTealText) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = SoftMintLight,
+                            unfocusedContainerColor = SoftMintLight,
+                            focusedBorderColor = DarkTealPrimary,
+                            unfocusedBorderColor = SoftMintAccent,
+                            cursorColor = DarkTealPrimary
+                        ),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    val displayError = validationError ?: (if (completeState is Resource.Error) (completeState as Resource.Error).message else null)
                     if (displayError != null) {
                         Text(
                             text = displayError,
@@ -231,15 +248,14 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
                     Button(
                         onClick = {
                             validationError = null
-                            val emailTrimmed = emailOrPhone.trim()
-                            Log.d("ForgotPasswordScreen", "FORGOT_PASSWORD_CLICKED")
-                            if (emailTrimmed.isBlank()) {
-                                validationError = "Lütfen e-posta adresinizi giriniz."
-                            } else if (!emailTrimmed.contains("@") || emailTrimmed.length < 5) {
-                                validationError = "Geçersiz e-posta formatı."
+                            if (newPassword.isBlank() || confirmPassword.isBlank()) {
+                                validationError = "Lütfen tüm alanları doldurunuz."
+                            } else if (newPassword.length < 8) {
+                                validationError = "Şifreniz en az 8 karakter uzunluğunda olmalıdır."
+                            } else if (newPassword != confirmPassword) {
+                                validationError = "Şifreler birbiriyle eşleşmiyor."
                             } else {
-                                Log.d("ForgotPasswordScreen", "PASSWORD_RESET_REQUEST_STARTED")
-                                viewModel.requestPasswordReset(emailTrimmed)
+                                viewModel.completePasswordReset(resetToken, newPassword)
                             }
                         },
                         modifier = Modifier
@@ -251,9 +267,9 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
                             contentColor = Color.White,
                             disabledContainerColor = DarkTealPrimary.copy(alpha = 0.6f)
                         ),
-                        enabled = resetRequestState !is Resource.Loading
+                        enabled = completeState !is Resource.Loading
                     ) {
-                        if (resetRequestState is Resource.Loading) {
+                        if (completeState is Resource.Loading) {
                             CircularProgressIndicator(
                                 color = Color.White,
                                 modifier = Modifier.size(24.dp),
@@ -261,7 +277,7 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
                             )
                         } else {
                             Text(
-                                "KOD GÖNDER",
+                                "Şifreyi Güncelle",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
@@ -270,27 +286,6 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
                         }
                     }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Navigation to Login Screen
-            Row(
-                modifier = Modifier.padding(bottom = 24.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Zaten hesabınız var mı? ",
-                    color = LoginSecondaryText,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    text = "Giriş Yap",
-                    color = DarkTealPrimary,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.clickable { navController.popBackStack() }
-                )
             }
         }
     }

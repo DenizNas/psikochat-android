@@ -1,5 +1,6 @@
 package com.psikochat.app.ui.auth
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -19,23 +21,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import com.psikochat.app.ui.theme.*
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.psikochat.app.data.api.RetrofitClient
 import com.psikochat.app.data.local.TokenManager
 import com.psikochat.app.data.model.Resource
 import com.psikochat.app.data.repository.AuthRepository
+import com.psikochat.app.ui.theme.*
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManager) {
+fun VerificationCodeScreen(navController: NavController, email: String, tokenManager: TokenManager) {
     val api = RetrofitClient.create(tokenManager)
     val repo = AuthRepository(api)
     val factory = object : ViewModelProvider.Factory {
@@ -45,23 +48,25 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
     }
     val viewModel: AuthViewModel = viewModel(factory = factory)
 
-    var emailOrPhone by remember { mutableStateOf("") }
+    var code by remember { mutableStateOf("") }
     var validationError by remember { mutableStateOf<String?>(null) }
-    val resetRequestState by viewModel.resetRequestState.collectAsState()
+    var cooldownSeconds by remember { mutableStateOf(60) }
+    
+    val verifyState by viewModel.verifyCodeState.collectAsState()
 
-    LaunchedEffect(resetRequestState) {
-        when (resetRequestState) {
-            is Resource.Success -> {
-                if (resetRequestState.data == true) {
-                    Log.d("ForgotPasswordScreen", "PASSWORD_RESET_REQUEST_SUCCESS")
-                    val encodedEmail = java.net.URLEncoder.encode(emailOrPhone.trim(), "UTF-8")
-                    navController.navigate("verification_code/$encodedEmail")
-                }
-            }
-            is Resource.Error -> {
-                Log.e("ForgotPasswordScreen", "PASSWORD_RESET_REQUEST_ERROR")
-            }
-            else -> {}
+    // Resend countdown timer
+    LaunchedEffect(cooldownSeconds) {
+        if (cooldownSeconds > 0) {
+            delay(1000)
+            cooldownSeconds -= 1
+        }
+    }
+
+    LaunchedEffect(verifyState) {
+        if (verifyState is Resource.Success && (verifyState.data != null)) {
+            val token = verifyState.data!!
+            val encodedToken = java.net.URLEncoder.encode(token, "UTF-8")
+            navController.navigate("reset_password/$encodedToken")
         }
     }
 
@@ -132,7 +137,7 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Favorite,
+                    imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
                     tint = DarkTealPrimary
@@ -179,7 +184,7 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "Şifremi Unuttum",
+                        text = "Doğrulama Kodu",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold
                         ),
@@ -188,7 +193,7 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
                     )
 
                     Text(
-                        text = "Hemen şifrenizi yenilemek için kayıtlı e-posta adresinizi veya telefon numaranızı girin. Size bir doğrulama kodu göndereceğiz.",
+                        text = "$email adresine 6 haneli bir doğrulama kodu gönderdik. Lütfen aşağıdaki alana girin.",
                         style = MaterialTheme.typography.bodySmall,
                         color = LoginSecondaryText,
                         modifier = Modifier.align(Alignment.Start)
@@ -197,13 +202,16 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
                     Spacer(modifier = Modifier.height(24.dp))
 
                     OutlinedTextField(
-                        value = emailOrPhone,
-                        onValueChange = { emailOrPhone = it },
-                        placeholder = { Text("E-posta veya Telefon Numarası", color = LoginSecondaryText) },
-                        textStyle = TextStyle(color = LoginTextColor),
-                        modifier = Modifier.fillMaxWidth(),
+                        value = code,
+                        onValueChange = { 
+                            if (it.length <= 6) {
+                                code = it.filter { char -> char.isDigit() }
+                            }
+                        },
+                        placeholder = { Text("6 Haneli Kod", color = LoginSecondaryText, textAlign = TextAlign.Center) },
+                        textStyle = TextStyle(color = LoginTextColor, textAlign = TextAlign.Center, fontSize = 20.sp, fontWeight = FontWeight.Bold),
+                        modifier = Modifier.fillMaxWidth(0.8f),
                         shape = RoundedCornerShape(16.dp),
-                        leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = SecondaryTealText) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = SoftMintLight,
                             unfocusedContainerColor = SoftMintLight,
@@ -211,12 +219,13 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
                             unfocusedBorderColor = SoftMintAccent,
                             cursorColor = DarkTealPrimary
                         ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    val displayError = validationError ?: (if (resetRequestState is Resource.Error) (resetRequestState as Resource.Error).message else null)
+                    val displayError = validationError ?: (if (verifyState is Resource.Error) (verifyState as Resource.Error).message else null)
                     if (displayError != null) {
                         Text(
                             text = displayError,
@@ -231,15 +240,10 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
                     Button(
                         onClick = {
                             validationError = null
-                            val emailTrimmed = emailOrPhone.trim()
-                            Log.d("ForgotPasswordScreen", "FORGOT_PASSWORD_CLICKED")
-                            if (emailTrimmed.isBlank()) {
-                                validationError = "Lütfen e-posta adresinizi giriniz."
-                            } else if (!emailTrimmed.contains("@") || emailTrimmed.length < 5) {
-                                validationError = "Geçersiz e-posta formatı."
+                            if (code.length != 6) {
+                                validationError = "Lütfen 6 haneli doğrulama kodunu eksiksiz giriniz."
                             } else {
-                                Log.d("ForgotPasswordScreen", "PASSWORD_RESET_REQUEST_STARTED")
-                                viewModel.requestPasswordReset(emailTrimmed)
+                                viewModel.verifyPasswordResetCode(email, code)
                             }
                         },
                         modifier = Modifier
@@ -251,9 +255,9 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
                             contentColor = Color.White,
                             disabledContainerColor = DarkTealPrimary.copy(alpha = 0.6f)
                         ),
-                        enabled = resetRequestState !is Resource.Loading
+                        enabled = verifyState !is Resource.Loading
                     ) {
-                        if (resetRequestState is Resource.Loading) {
+                        if (verifyState is Resource.Loading) {
                             CircularProgressIndicator(
                                 color = Color.White,
                                 modifier = Modifier.size(24.dp),
@@ -261,7 +265,7 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
                             )
                         } else {
                             Text(
-                                "KOD GÖNDER",
+                                "Kodu Doğrula",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
@@ -269,28 +273,30 @@ fun ForgotPasswordScreen(navController: NavController, tokenManager: TokenManage
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    if (cooldownSeconds > 0) {
+                        Text(
+                            text = "Tekrar Kod Gönder ($cooldownSeconds)",
+                            color = LoginSecondaryText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    } else {
+                        Text(
+                            text = "Tekrar Kod Gönder",
+                            color = DarkTealPrimary,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.clickable {
+                                validationError = null
+                                cooldownSeconds = 60
+                                viewModel.requestPasswordReset(email)
+                            }
+                        )
+                    }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Navigation to Login Screen
-            Row(
-                modifier = Modifier.padding(bottom = 24.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Zaten hesabınız var mı? ",
-                    color = LoginSecondaryText,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    text = "Giriş Yap",
-                    color = DarkTealPrimary,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.clickable { navController.popBackStack() }
-                )
             }
         }
     }

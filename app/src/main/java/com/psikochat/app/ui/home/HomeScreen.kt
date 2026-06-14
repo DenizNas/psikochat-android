@@ -94,7 +94,7 @@ fun HomeScreen(navController: NavController, tokenManager: TokenManager) {
     val dashboardState by dashboardViewModel.dashboardState.collectAsState()
 
     // 3. Appointment ViewModel Integration
-    val appointmentRepo = com.psikochat.app.data.repository.AppointmentRepository(api, db.appointmentDao())
+    val appointmentRepo = com.psikochat.app.data.repository.AppointmentRepository(api, db.appointmentDao(), context)
     val appointmentFactory = object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -492,7 +492,7 @@ fun HomeScreen(navController: NavController, tokenManager: TokenManager) {
                     navController.navigate("payment_methods")
                 }
                 MenuRow(icon = Icons.Default.Notifications, title = "Bildirimler") {
-                    showNotificationDialog = true
+                    navController.navigate("notification_settings")
                 }
                 MenuRow(icon = Icons.Default.Lock, title = "Güvenlik") {
                     navController.navigate("privacy_data")
