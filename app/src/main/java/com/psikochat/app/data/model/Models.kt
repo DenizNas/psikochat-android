@@ -34,7 +34,13 @@ data class ChatResponse(
     @SerializedName("emotion") val emotion: String, 
     @SerializedName("risk") val risk: String, 
     @SerializedName("response") val response: String, 
-    @SerializedName("emergency_contact") val emergencyContact: String?
+    @SerializedName("emergency_contact") val emergencyContact: String?,
+    @SerializedName("is_crisis") val isCrisis: Boolean? = null,
+    @SerializedName("crisis_level") val crisisLevel: String? = null,
+    @SerializedName("show_emergency_support") val showEmergencySupport: Boolean? = null,
+    @SerializedName("emergency_phone") val emergencyPhone: String? = null,
+    @SerializedName("emergency_title") val emergencyTitle: String? = null,
+    @SerializedName("emergency_message") val emergencyMessage: String? = null
 )
 data class HistoryItem(
     @SerializedName("id") val id: Int? = null,

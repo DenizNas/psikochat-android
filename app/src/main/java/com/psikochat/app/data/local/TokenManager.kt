@@ -26,9 +26,17 @@ class TokenManager(private val context: Context) {
         val WEEKLY_RECAP_KEY = booleanPreferencesKey("notifications_weekly_recap")
         val WEEKLY_RECAP_DAY_KEY = stringPreferencesKey("notifications_weekly_recap_day")
         val WEEKLY_RECAP_TIME_KEY = stringPreferencesKey("notifications_weekly_recap_time")
+        val PROFILE_PHOTO_URL_KEY = stringPreferencesKey("profile_photo_url")
     }
     
     fun getToken(): Flow<String?> = context.dataStore.data.map { it[TOKEN_KEY] }
+    fun getProfilePhotoUrl(): Flow<String?> = context.dataStore.data.map { it[PROFILE_PHOTO_URL_KEY] }
+    
+    suspend fun saveProfilePhotoUrl(url: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PROFILE_PHOTO_URL_KEY] = url
+        }
+    }
     fun getUsername(): Flow<String> =
     context.dataStore.data.map { it[USERNAME_KEY] ?: "Kullanıcı" }
     
@@ -125,6 +133,7 @@ class TokenManager(private val context: Context) {
             preferences.remove(WEEKLY_RECAP_KEY)
             preferences.remove(WEEKLY_RECAP_DAY_KEY)
             preferences.remove(WEEKLY_RECAP_TIME_KEY)
+            preferences.remove(PROFILE_PHOTO_URL_KEY)
         }
         try {
             AppDatabase.getInstance(context).clearAllTables()

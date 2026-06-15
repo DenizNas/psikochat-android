@@ -32,6 +32,9 @@ import com.psikochat.app.data.local.TokenManager
 import com.psikochat.app.data.model.Resource
 import com.psikochat.app.ui.theme.*
 import com.psikochat.app.ui.components.*
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.psikochat.app.R
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -136,12 +139,26 @@ fun HomeScreen(navController: NavController, tokenManager: TokenManager) {
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Text(
-                        "PsikoChat Paneli",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = LoginTextColor
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_logo),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "PsikoChat Paneli",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = LoginTextColor
+                        )
+                    }
                 },
                 actions = {
                     IconButton(onClick = { /* Menu Action placeholder */ }) {

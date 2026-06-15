@@ -19,6 +19,10 @@ class AuthRepository(private val api: PsikoApi) {
             Log.d(TAG, "LOGIN | İstek başarılı, token alındı.")
             Resource.Success(res)
         } catch (e: Exception) {
+            val activeBaseUrl = com.psikochat.app.data.api.RetrofitClient.BASE_URL
+            val fullUrl = "${activeBaseUrl.removeSuffix("/")}/login"
+            val status = if (e is HttpException) e.code().toString() else "N/A"
+            Log.e(TAG, "LOGIN | HATA. Active BASE_URL: $activeBaseUrl, Full URL: $fullUrl, Exception: ${e.javaClass.name} - ${e.message}, Status Code: $status", e)
             parseError(e, "Giriş başarısız")
         }
     }
